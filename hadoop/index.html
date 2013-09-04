@@ -26,7 +26,7 @@
 		</script>
 
 		<!--[if lt IE 9]>
-		<script src="lib/js/html5shiv.js"></script>
+		<script src="../lib/js/html5shiv.js"></script>
 		<![endif]-->
 	</head>
 
@@ -38,46 +38,51 @@
 			<div class="slides">
 				<section>
 					<h1>Hadoop</h1>
-					<h3>批量大数据处理</h3>
+					<h3>大数据处理</h3>
 					<p>
 						<small> by xiaofei</small>
 					</p>
 				</section>
+                                
 
 				<section>
-					<h2>Heads Up</h2>
+					<h2>历史</h2>
 					<p>
-						reveal.js is a framework for easily creating beautiful presentations using HTML. You'll need a browser with
-						support for CSS 3D transforms to see it in its full glory.
-					</p>
+  						作者:Doug Cutting
 
-					<aside class="notes">
-						Oh hey, these are some notes. They'll be hidden in your presentation, but you can see them if you open the speaker notes window (hit 's' on your keyboard).
-					</aside>
+					</p>
+                                        <ul>
+                                          <li>1997 开始Lucene项目开发</li>
+                                          <li>2002 Nutch 爬虫和搜索系统，但无法处理多于几十亿的网页</li>
+                                          <li>2003 Google发布GFS paper</li>
+                                          <li>2004 开始开发开源的GFS实现Nutch Distributed Filesystem (NDFS)</li>
+                                          <li>2004 Google发布MapReduce paper</li>
+                                          <li>2005 早期Nutch中已经有了可以工作的MapReduce实现</li>
+                                          <li>2006 Doug Cutting加入Yahoo,将NDFS和MapReduce从Nutch从分离为Apache顶级项目，百人团队专注于Hadoop</li>
+                                          <li>2008 雅虎宣布其索引网页的生产系统采用了在10 000多个核的Linux集群上运行的Hadoop</li>
+                                          <li>2009 Doug Cutting加入Cloudera</li>
+                                        </ul>
+
 				</section>
 
 				<!-- Example of nested vertical slides -->
 				<section>
 					<section>
-						<h2>Vertical Slides</h2>
-						<p>
-							Slides can be nested inside of other slides,
-							try pressing <a href="#" class="navigate-down">down</a>.
-						</p>
-						<a href="#" class="image navigate-down">
-							<img width="178" height="238" src="https://s3.amazonaws.com/hakim-static/reveal-js/arrow.png" alt="Down arrow">
-						</a>
+						<h2>发行版本</h2>
+						<p><img src="./images/apache_logo.png"/>Apache Hadoop 0.203、1.2.1、2.0.6alpha、2.1.0beta</p>
+						<p><img src="./images/cloudera_logo.png"/>Cloudera CDH3、CDH4</p>
+						<p><img src="./images/hortonworks_logo.png"/>Hortonworks HDP1.3、HDP2.0Beta</p>
+						<p><img src="./images/mapr_logo.png"/>MapR M3、M5、M7</p>
 					</section>
+                                        <section>
+                                                <h2>Apache branch和release</h2>
+                                                <a href="#" class="image navigate-down">
+                                                        <img src="./images/hadoop_branch_release.png" alt="branch and release">
+                                                </a>
+                                        </section>
 					<section>
-						<h2>Basement Level 1</h2>
-						<p>Press down or up to navigate.</p>
-					</section>
-					<section>
-						<h2>Basement Level 2</h2>
-						<p>Cornify</p>
-						<a class="test" href="http://cornify.com">
-							<img width="280" height="326" src="https://s3.amazonaws.com/hakim-static/reveal-js/cornify.gif" alt="Unicorn">
-						</a>
+						<h2>CDH release</h2>
+						<img src="./images/cdh_release.png" alt="cdh release">
 					</section>
 					<section>
 						<h2>Basement Level 3</h2>
