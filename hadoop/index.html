@@ -43,10 +43,31 @@
 						<small> by xiaofei</small>
 					</p>
 				</section>
+                                <section>
+                                	<section>	
+					   <h2>数据处理历史</h2>
+					   <img src="./images/history.png"/>
+                                        </section>
+					<section>
+                                           <h2>Single DataBase</h2>
+                                       	   <h4>所有统计需求都可以通过SQL完成</h4>
+                                           <pre><code data-trim class="sql">SELECT city,count(1) as pv FROM traffic GROUP BY city</code></pre>
+                                           <pre><code data-trim class="sql">
+SELECT a.col1,b.col2,count(1) as ct 
+FROM tb1 a 
+JOIN tb2 b 
+ON a.id=b.id 
+GROUP BY a.col1,b.col2</code></pre>
+					   <h4>实时查询</h4>
+                                        </section>
+					<section>
+					  <h2>shared nothing architecture (SN)</h2>
+					</section>
+                                </section>
                                 
 
 				<section>
-					<h2>历史</h2>
+					<h2>Hadoop历史</h2>
 					<p>
   						作者:Doug Cutting
 
