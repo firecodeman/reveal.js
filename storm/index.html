@@ -50,7 +50,7 @@
                                         </section>
 					<section>
                                            <h2>描述</h2>
-                                           <p>Storm makes it easy to reliably process unbounded streams of data, doing for <red>realtime processing</red> what Hadoop did for <strong>batch processing</strong>. Storm is simple, can be used with any programming language, and is a lot of fun to use!</p>
+                                           <p>Storm makes it easy to reliably process unbounded streams of data, doing for <strong>realtime processing</strong> what Hadoop did for <strong>batch processing</strong>. Storm is simple, can be used with any programming language, and is a lot of fun to use!</p>
                                         </section>
 				</section>
 				<section>
@@ -72,7 +72,7 @@
 					<section>
                                         	<h2>保障数据被处理</h2>
 						<ul>
-                                        	  <li>保障数据肯定能被处理一次</li>
+                                        	  <li>记录级容错</li>
                                        		  <li>Transction</li>
 						</ul>
                                         </section>
@@ -155,7 +155,7 @@
 
                                                         </tr>
                                                         <tr>
-                                                                <td>Reduct</td><td>Bolt</td>
+                                                                <td>Reduce</td><td>Bolt</td>
                                                         </tr>
                                                         <tr>
                                                                 <td>Writable</td><td>Tuple</td>
@@ -173,6 +173,18 @@
 					<section>
                                                 <h2>Spouts</h2>
                                                 <img src="images/spouts.png"/>
+						<pre>
+							<code class="java">
+public interface ISpout extends Serializable {
+    void open(Map conf, TopologyContext context,
+       SpoutOutputCollector collector);
+    void close();
+    void nextTuple();
+    void ack(Object msgId);
+    void fail(Object msgId);
+}
+							</code>
+						</pre>
                                         </section>
 					<section>
                                                 <h2>Bolts</h2>
@@ -186,8 +198,37 @@
 						</ul>
                                         </section>
 					<section>
+						<h2>Bolts</h2>
+						<pre>
+							<code class="java">
+public interface IBolt extends Serializable {
+    void prepare(Map stormConf, TopologyContext context, OutputCollector collector);
+    void execute(Tuple input);
+    void cleanup();
+}
+
+							</code>
+						</pre>
+					</section>
+					<section>
                                                 <h2>Topologies</h2>
                                                 <img src="http://storm-project.net/images/topology.png" width="60%" height="60%"/>
+					</section>
+					<section>
+						<h2>Topologies</h2>
+						<pre>
+							<code class="java">
+TopologyBuilder builder = new TopologyBuilder();
+builder.setSpout("sentences", new KestrelSpout("kestrel.backtype.com",
+                                               22133,
+                                               "sentence_queue",
+                                               new StringScheme()));
+builder.setBolt("split", new SplitSentence(), 10)
+        .shuffleGrouping("sentences");
+builder.setBolt("count", new WordCount(), 20)
+        .fieldsGrouping("split", new Fields("word"));
+							</code>
+						</pre>
                                         </section>
 					<section>
                                                 <h2>Tasks</h2>
@@ -409,6 +450,145 @@ public class WordCounter implements IRichBolt {
 					</section>
 				</section>
 				<section>
+					<h2>DRPC</h2>
+					<img src="images/drpc.png"/>
+				</section>
+				<section>
+					<h2>记录级容错</h2>
+					<img src="https://github.com/nathanmarz/storm/wiki/images/tuple_tree.png"/>
+					
+				</section>
+				
+				<section>
+					<h2>记录级容错</h2>
+					<ul>
+						<li>Tuple超过topology.message.timeout.secs未被处理被视为失效</li>
+						<li>首先Storm从Spout中请求nextTuple获取tuple</li>
+						<li>Spout通过SpoutOutputCollector提供的open方法输出tuple到输出流,并提供一个message id标识此tuple</li>
+						<li>接着tuple被Bolt消费,Storm跟踪它创建的消息树。如果Storm检测到tuple被fully process，Storm调用ack传入该message id。如果tuple超时将在Spout中调用fail方法。</li>
+				
+					</ul>
+				</section>
+				<!--<section>
+					<h2>Storm 可靠性 API</h2>
+					<ul>
+						<li>首先,你需要告诉Storm是否你在tuple tree中创建了新的连接</li>
+						<li>另外,当你的额外的tuple完成时告诉Storm</li>
+					</ul>
+				</section>-->
+				<section>
+					<h2>事务拓扑</h2>
+					<ul>
+						<li>Transactional topology</li>
+						<li>Trident</li>
+					</ul>
+				</section>
+				<section>
+					<h2>Transactional topology</h2>
+					<ul>
+						<li>0.7.0引入</li>
+						<li>需要支持指定批次replay的queue</li>
+						<li>实现了基于kafka的transactional spout</li>
+					</ul>
+				</section>
+				<section>
+					<h2>Transactional topology</h2>
+					<img src="images/transactional_topology.png"/>
+				</section>
+				<section>
+					<h2>Trident</h2>
+					<ul>
+						<li>0.8.0引入</li>
+					</ul>
+					<img src="https://github.com/nathanmarz/storm/wiki/images/batched-stream.png"/>
+				</section>
+				<section>
+					<h2>Trident Spout</h2>
+					<pre>
+						<code class="java">
+FixedBatchSpout spout = new FixedBatchSpout(new Fields("sentence"), 3,
+               new Values("the cow jumped over the moon"),
+               new Values("the man went to the store and bought some candy"),
+               new Values("four score and seven years ago"),
+               new Values("how many apples can you eat"),
+spout.setCycle(true);
+						</code>
+					</pre>
+					
+				</section>
+				<section>
+					<h2>Trident Topology</h2>
+					<pre>
+						<code class="java">
+TridentTopology topology = new TridentTopology();        
+TridentState wordCounts =
+     topology.newStream("spout1", spout)
+       .each(new Fields("sentence"), new Split(), new Fields("word"))
+       .groupBy(new Fields("word"))
+       .persistentAggregate(new MemoryMapState.Factory(), new Count(), new Fields("count"))                
+       .parallelismHint(6);
+						</code>
+					</pre>
+				</section>
+				<section>
+					<h2>Trident BaseFunction</h2>
+					<pre>
+						<code class="java">
+public class Split extends BaseFunction {
+   public void execute(TridentTuple tuple, TridentCollector collector) {
+       String sentence = tuple.getString(0);
+       for(String word: sentence.split(" ")) {
+           collector.emit(new Values(word));                
+       }
+   }
+}
+						</code>
+					</pre>
+				</section>
+				<section>
+					<h2>Trident DRPC</h2>
+					<pre>
+						<code class="java">
+DRPCClient client = new DRPCClient("drpc.server.location", 3772);
+System.out.println(client.execute("words", "cat dog the man");
+// prints the JSON-encoded result, e.g.: "[[5078]]"
+						</code>
+					</pre>
+					<pre>
+						<code class="java">
+topology.newDRPCStream("words")
+       .each(new Fields("args"), new Split(), new Fields("word"))
+       .groupBy(new Fields("word"))
+       .stateQuery(wordCounts, new Fields("word"), new MapGet(), new Fields("count"))
+       .each(new Fields("count"), new FilterNull())
+       .aggregate(new Fields("count"), new Sum(), new Fields("sum"));
+						</code>
+					</pre>
+				</section>
+				<section>
+					<h2>状态存储</h2>
+					<ul>
+						<li>Trident解决的两个问题</li>
+					<ul>
+						<li>为每一批次提供了一个唯一的transaction id，重试时使用一致的transaction id</li>
+						<li>状态更新依据批次的顺序</li>
+						
+					</ul>
+						<li>存储方式</li>
+					<ul>
+						<li>Memory</li>
+						<li>Memcached</li>
+						<li>Cassandra</li>
+						<li>...</li>
+					</ul>
+					</ul>
+					
+				</section>
+				<section>
+					<h2>Trident topology</h2>
+					<img src="https://github.com/nathanmarz/storm/wiki/images/trident-to-storm2.png"/>
+				</section>
+				<section>
 					<h2>Storm的问题</h2>
 					<ul>
 						<li>向topology增加业务时需要删除原有topology部署新的topology(0.9增加了swap)</li>
@@ -427,15 +607,15 @@ public class WordCounter implements IRichBolt {
 					</section>
 					<section>
 						<h2>一淘数据部(月光宝盒)</h2>
-						<img src="images/taobao_example.png" width="90%" height="90%"/>
+						<img src="images/taobao_example.png" width="70%" height="70%"/>
 					</section>
 					<section>
                                                 <h2>一淘数据部(月光宝盒)</h2>
-                                                <img src="images/taobao_example_1.png" width="90%" height="90%"/>
+                                                <img src="images/taobao_example_1.png" width="70%" height="70%"/>
                                         </section>
 					<section>
-						<h2>协程(Alerting)</h2>
-						<img src="images/crip_example.png" width="90%" height="90%"/>
+						<h2>携程(Alerting)</h2>
+						<img src="images/crip_example.png" width="70%" height="70%"/>
 					</section>
 					
 				</section>
@@ -459,11 +639,11 @@ public class WordCounter implements IRichBolt {
 					</section>
 					<section>
 						<h2>Storm UI</h2>
-						<img src="images/storm_ui.png"/>
+						<img src="images/storm_ui.png" width="80%" height="80%"/>
 					</section>
 					<section>
 						<h2>JMX/VisualVM</li>
-						<img src="images/storm_jmx.png"/>
+						<img src="images/storm_jmx.png" width="80%" height="80%"/>
 						<!--<pre>
 #storm.xml							<code>–
 -worker.childopts: ”
@@ -624,16 +804,20 @@ public Job takeJob() {
 						<ul>
 							<li>服务或组件监控</li>
 							<ul>
-								<li>Nagios(硬件、服务进程、log)</li>
+								<li>Nagios(硬件、服务进程、log)参考storm_monitor</li>
 								<li>Storm UI(Thrift)</li>
 								<li>Ooyala metrics_storm</li>
-								<li>Ganglia</li>
+								<li>Ganglia/Graphite</li>
 							</ul>
 							<li>应用监控</li>
 							<ul>
 								<li>Yammer Metrics</li>
 							</ul>
 						</ul>
+					</section>
+					<section>
+						<h2>网络规划</h2>
+						<img src="images/network_topology.png"/>
 					</section>
 				</section>
 
