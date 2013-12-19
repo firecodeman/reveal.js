@@ -1,0 +1,54 @@
+@startuml
+FSNameSystem->LeaseManager :startMonitor()
+
+activate LeaseManager
+   LeaseManager --> Monitor: run()
+   LeaseManager --> FSNameSystem
+   
+deactivate LeaseManager
+
+activate Monitor
+  Monitor ->FSNameSystem: writeLockInterruptibly()
+deactivate Monitor
+
+
+activate FSNameSystem
+  FSNameSystem --> Monitor 
+deactivate FSNameSystem
+
+activate Monitor
+  Monitor -> LeaseManager: checkLeases()
+deactivate Monitor
+
+
+activate LeaseManager
+  LeaseManager -> LeaseManager: //each sortedLeases get oldest lease
+  LeaseManager -> FSNameSystem: internalReleaseLease(oldest, p, HdfsServerConstants.NAMENODE_LEASE_HOLDER)) //assign to success
+
+deactivate LeaseManager
+
+
+activate FSNameSystem
+  FSNameSystem -> FSNameSystem: finalizeINodeFileUnderConstruction(src, pendingFile) //if (nrCompleteBlocks == nrBlocks)
+  FSNameSystem -> FSNameSystem: reassignLease(lease, src, recoveryLeaseHolder, pendingFile)// if lastBlockState==UNDER_RECOVERY
+  FSNameSystem -> FSNameSystem: logReassignLease(lease.getHolder(), src, newHolder)
+  FSNameSystem -> FSNameSystem: reassignLeaseInternal(lease, src, newHolder, pendingFile)
+  FSNameSystem --> LeaseManager: <<return success>>
+deactivate FSNameSystem
+
+activate LeaseManager
+  LeaseManager -> LeaseManager: removeLease(oldest, p) //if(success) 
+  LeaseManager --> Monitor: <<return void>>
+deactivate LeaseManager
+
+activate Monitor
+  Monitor -> FSNameSystem: writeUnlock()
+deactivate Monitor
+
+
+activate FSNameSystem
+  FSNameSystem --> Monitor
+deactivate FSNameSystem
+
+
+@enduml

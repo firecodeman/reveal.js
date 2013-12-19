@@ -1,0 +1,28 @@
+@startuml
+
+activate DataStreamer
+  DataStreamer --> DataStreamer :run() //while(!streamerClosed && dfsClient.clientRunning)
+
+    DataStreamer -> DataStreamer:  //if the Responder encountered an error, shutdown Responder
+    DataStreamer -> DataStreamer:  processDatanodeError() // process datanode IO errors if any
+    DataStreamer -> DataStreamer:  //wait for a packet to be sent
+    DataStreamer -> DataStreamer: nextBlockOutputStream(src) initDataStreaming()//assign to nodes if stage == BlockConstructionStage.PIPELINE_SETUP_CREATE
+  DataStreamer -> DataStreamer: createBlockOutputStream(nodes, 0L, false) //assign to success
+  DataStreamer -> NameNode: abandonBlock(block, src, dfsClient.clientName)//if(!success)  
+deactivate DataStreamer
+  
+activate NameNode
+  NameNode --> DataStreamer
+deactivate NameNode
+
+activate DataStreamer
+    DataStreamer -> DataStreamer: setupPipelineForAppendOrRecovery() initDataStreaming() //if stage == BlockConstructionStage.PIPELINE_SETUP_APPEND
+    DataStreamer -> DataStreamer: //wait for all data packets have been successfully acked
+    DataStreamer -> DataStreamer: //move packet from dataQueue to ackQueue
+    DataStreamer -> DataStreamer: // write out data to remote datanode
+    DataStreamer -> DataStreamer: endBlock() //if Is this block full?
+  
+
+deactivate DataStreamer
+
+@enduml

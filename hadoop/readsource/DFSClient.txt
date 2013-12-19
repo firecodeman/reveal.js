@@ -1,0 +1,134 @@
+@startuml
+actor User
+
+User ->Path: getFileSystem(conf)
+
+activate Path
+Path --> User: <<return ? extends FileSystem>>
+deactivate Path
+
+activate User
+User -> DistributedFileSystem: create(path)
+deactivate User
+
+activate DistributedFileSystem
+DistributedFileSystem ->DFSClient: create(...)
+deactivate DistributedFileSystem
+
+activate DFSClient
+DFSClient -> DFSOutputStream: newStreamForCreate(...)
+deactivate DFSClient
+
+activate DFSOutputStream
+DFSOutputStream --> DataStreamer : start()
+deactivate DFSOutputStream
+
+activate DataStreamer
+DataStreamer --> DataStreamer: run
+DataStreamer -->DFSOutputStream
+deactivate DataStreamer
+
+DFSOutputStream --> DFSClient: <<return DFSOutputStream>>
+deactivate DFSOutputStream
+
+activate DFSClient
+DFSClient -> DFSClient: beginFileLease(src, result) //leaseRenew Deamon
+DFSClient --> DistributedFileSystem
+deactivate DFSClient
+
+activate DistributedFileSystem
+DistributedFileSystem -> HdfsDataOutputStream: new HdfsDataOutputStream(out, statistics)
+deactivate DistributedFileSystem
+
+activate HdfsDataOutputStream
+HdfsDataOutputStream --> User: <<return HdfsDataOutputStream>>
+deactivate HdfsDataOutputStream
+
+activate User
+User -> HdfsDataOutputStream:write(byte b[], int off, int len)
+deactivate User
+
+activate HdfsDataOutputStream
+HdfsDataOutputStream -> FSOutputSummer: write(byte b[], int off, int len)
+deactivate HdfsDataOutputStream
+
+activate FSOutputSummer
+FSOutputSummer -> DFSOutputStream: writeChunk(byte[] b, int offset, int len, byte[] checksum)
+deactivate FSOutputSummer
+
+activate DFSOutputStream
+DFSOutputStream -> Packet: new Packet(packetSize, chunksPerPacket, bytesCurBlock)
+deactivate DFSOutputStream
+
+activate Packet
+Packet --> DFSOutputStream: <<assign currentPacket>>
+deactivate Packet
+
+activate DFSOutputStream
+  DFSOutputStream --> DFSOutputStream: currentPacket.writeChecksum(checksum, 0, cklen)
+  DFSOutputStream --> DFSOutputStream: currentPacket.currentPacket.writeData(b, offset, len)
+  DFSOutputStream --> DFSOutputStream: currentPacket.currentPacket.numChunks++
+  DFSOutputStream --> DFSOutputStream: waitAndQueueCurrentPacket() if currentPacket full or reach blocksize
+  DFSOutputStream --> FSOutputSummer
+deactivate DFSOutputStream
+
+FSOutputSummer --> HdfsDataOutputStream
+HdfsDataOutputStream --> User
+
+activate User
+User -> HdfsDataOutputStream: sync()
+deactivate User
+
+HdfsDataOutputStream -> DFSOutputStream: sync() //sync()==hflush()==flushOrSync(false) hsync==flushOrSync(true)
+
+activate DFSOutputStream
+DFSOutputStream -> DFSOutputStream: flushOrSync(isSync)
+DFSOutputStream -> FSOutputSummer:  flushBuffer(true)
+
+deactivate DFSOutputStream
+
+activate FSOutputSummer
+  FSOutputSummer --> DFSOutputStream
+deactivate FSOutputSummer
+
+activate DFSOutputStream
+DFSOutputStream -> DFSOutputStream: waitAndQueueCurrentPacket() //currentPacket.syncBlock = isSync;
+DFSOutputStream -> DFSOutputStream: waitForAckedSeqno(toWaitFor)
+DFSOutputStream --> User
+deactivate DFSOutputStream
+
+activate User
+  User -> HdfsDataOutputStream: close()
+deactivate User
+
+HdfsDataOutputStream -> DFSOutputStream: close()
+
+DFSOutputStream -> FSOutputSummer: flushBuffer() 
+
+
+activate FSOutputSummer
+  FSOutputSummer --> DFSOutputStream
+deactivate FSOutputSummer
+
+activate DFSOutputStream
+ DFSOutputStream -> DFSOutputStream: waitAndQueueCurrentPacket()
+ DFSOutputStream -> DFSOutputStream: flushInternal()
+ DFSOutputStream -> DFSOutputStream: completeFile(lastBlock);
+ DFSOutputStream -> DFSClient: endFileLease(src);
+
+  activate DFSClient
+    DFSClient --> DFSOutputStream
+  deactivate DFSClient
+
+deactivate DFSOutputStream
+
+DFSOutputStream --> HdfsDataOutputStream
+HdfsDataOutputStream --> User
+
+
+
+
+
+
+@enduml
+
