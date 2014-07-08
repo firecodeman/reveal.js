@@ -1,0 +1,150 @@
+@startuml
+interface Replica {
+  + long getBlockId()
+  + long getGenerationStamp()
+  + ReplicaState getState()
+  + long getNumBytes()
+  + long getBytesOnDisk()
+  + long getVisibleLength()
+}
+
+Replica <|-- ReplicaInfo
+
+abstract class ReplicaInfo {
+  - FsVolumeSpi volume
+  - File dir
+  + File getBlockFile()
+  + File getBlockFile()
+  + File getMetaFile()
+  + FsVolumeSpi getVolume()
+  ~ void setVolume(FsVolumeSpi vol)
+  ~ File getDir()
+  + void setDir(File dir)
+  + boolean isUnlinked()
+  + void setUnlinked()
+  - void unlinkFile(File file, Block b)
+  + boolean unlinkBlock(int numLinks)
+  ~ setNewerGenerationStamp(long newGS)
+  + String toString()
+   
+}
+
+ReplicaInfo <|-- ReplicaWaitingToBeRecovered
+
+class ReplicaWaitingToBeRecovered {
+  - boolean unlinked
+  + ReplicaWaitingToBeRecovered(long blockId, long len, long genStamp,FsVolumeSpi vol, File dir)
+  + ReplicaWaitingToBeRecovered(Block block, FsVolumeSpi vol, File dir)
+  + ReplicaWaitingToBeRecovered(ReplicaWaitingToBeRecovered from)
+  + ReplicaState getState() #return ReplicaState.RWR
+  + boolean isUnlinked()
+  + void setUnlinked()
+  + long getVisibleLength()
+  + long getBytesOnDisk()
+  + boolean equals(Object o)
+  + int hashCode()
+  + String toString()
+}
+
+ReplicaInfo <|-- ReplicaUnderRecovery
+
+class ReplicaUnderRecovery {
+  - ReplicaInfo original
+  - long recoveryId
+  
+  + ReplicaUnderRecovery(ReplicaInfo replica, long recoveryId)
+  + ReplicaUnderRecovery(ReplicaUnderRecovery from)
+
+  + long getRecoveryID()
+  + void setRecoveryID(long recoveryId)
+  + ReplicaInfo getOriginalReplica()
+  + boolean isUnlinked()
+  + void setUnlinked()
+  + ReplicaState getState() #return ReplicaState.RUR
+  + long getVisibleLength()
+  + long getBytesOnDisk()
+  + void setBlockId(long blockId)
+  + void setGenerationStamp(long gs)
+  + void setNumBytes(long numBytes)
+  + void setDir(File dir)
+  + setVolume(FsVolumeSpi vol)
+  + boolean equals(Object o)
+  + int hashCode()
+  + String toString()
+  + ReplicaRecoveryInfo createInfo()
+}
+
+ReplicaInfo <|-- FinalizedReplica
+class FinalizedReplica {
+  - boolean unlinked
+  + FinalizedReplica(long blockId, long len, long genStamp, FsVolumeSpi vol, File dir)
+  + FinalizedReplica(Block block, FsVolumeSpi vol, File dir)
+  + FinalizedReplica(FinalizedReplica from)
+  + ReplicaState getState() #return ReplicaState.FINALIZED
+  + boolean isUnlinked()
+  + void setUnlinked()
+  + long getVisibleLength()
+  + long getBytesOnDisk()
+  + boolean equals(Object o)
+  + int hashCode()
+  + String toString()
+}
+
+Replica <|-- ReplicaInPipelineInterface
+interface ReplicaInPipelineInterface {
+  ~ void setNumBytes(long bytesReceived)
+  ~ long getBytesAcked()
+  ~ void setBytesAcked(long bytesAcked)
+  + void setLastChecksumAndDataLen(long dataLength, byte[] lastChecksum)
+  + ChunkChecksum getLastChecksumAndDataLen()
+  + ReplicaOutputStreams createStreams(boolean isCreate,DataChecksum requestedChecksum)
+}
+
+ReplicaInPipelineInterface <|-- ReplicaInPipeline
+ReplicaInfo <|-- ReplicaInPipeline
+class ReplicaInPipeline {
+  - long bytesAcked
+  - long bytesOnDisk
+  - byte[] lastChecksum
+  - Thread writer
+  + ReplicaInPipeline(long blockId, long genStamp,FsVolumeSpi vol, File dir)}
+  + ReplicaInPipeline(Block block,FsVolumeSpi vol, File dir, Thread writer)
+  + ReplicaInPipeline(long blockId, long len, long genStamp,FsVolumeSpi vol, File dir, Thread writer )
+  + ReplicaInPipeline(ReplicaInPipeline from)
+  + long getVisibleLength()
+  + ReplicaState getState() #return ReplicaState.TEMPORARY
+  + long getBytesAcked()
+  + void setBytesAcked(long bytesAcked)
+  + long getBytesOnDisk()
+  + synchronized void setLastChecksumAndDataLen(long dataLength, byte[] lastChecksum)
+  + synchronized ChunkChecksum getLastChecksumAndDataLen()
+  + void setWriter(Thread writer)
+  + boolean equals(Object o)
+  + void stopWriter()
+  + int hashCode()
+  + ReplicaOutputStreams createStreams(boolean isCreate, DataChecksum requestedChecksum)
+  + String toString()
+
+
+class ReplicaInPipelineInterface { 
+  ~ void setNumBytes(long bytesReceived)
+  ~ long getBytesAcked()
+  ~ void setBytesAcked(long bytesAcked)
+  + void setLastChecksumAndDataLen(long dataLength, byte[] lastChecksum)
+  + ChunkChecksum getLastChecksumAndDataLen()
+  + ReplicaOutputStreams createStreams(boolean isCreate,DataChecksum requestedChecksum)
+}
+
+ReplicaInPipeline <|-- ReplicaBeingWritten
+class ReplicaBeingWritten {
+  + ReplicaBeingWritten(long blockId, long genStamp, FsVolumeSpi vol, File dir)
+  + ReplicaBeingWritten(Block block, FsVolumeSpi vol, File dir, Thread writer)
+  + ReplicaBeingWritten(long blockId, long len, long genStamp,FsVolumeSpi vol, File dir, Thread writer )
+  + ReplicaBeingWritten(ReplicaBeingWritten from)
+  + long getVisibleLength()
+  + ReplicaState getState() #return ReplicaState.RBW
+  + boolean equals(Object o)
+  + int hashCode()
+}
+
+@enduml
