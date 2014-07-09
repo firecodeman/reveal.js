@@ -1,7 +1,7 @@
 #CDH4.1.2中File Could not complete问题定位
 
 ##问题现象
-**HBase Region问题:**Region在做compaction时DFSClient会造成新产生的HFile始终不能关闭，一直huang住并持续输出类似以下的log
+**HBase Region问题**:Region在做compaction时DFSClient会造成新产生的HFile始终不能关闭，一直huang住并持续输出类似以下的log
 ```
 2014-06-30 23:51:25,558 WARN org.apache.hadoop.hdfs.DFSClient: Error Recovery for block BP-178649112-10.35.66.11-1353498632460:blk_8552768721295466384_58
 792739 in pipeline 10.35.66.49:50010, 10.35.66.69:50010, 10.35.66.66:50010: bad datanode 10.35.66.66:50010
@@ -21,13 +21,10 @@ java.io.IOException: Bad response ERROR for block BP-178649112-10.35.66.11-13534
 
 ##问题分析
 是引用自 https://issues.apache.org/jira/browse/HDFS-5438 的问题原因和会引起的BUG：
->The incremental block reports from data nodes and block commits are asynchronous. This becomes troublesome when the gen stamp for a block is changed during a write pipeline recovery.
-
+> The incremental block reports from data nodes and block commits are asynchronous. This becomes troublesome when the gen stamp for a block is changed during a write pipeline recovery.
 - If an incremental block report is delayed from a node but NN had enough replicas already, a report with the old gen stamp may be received after block completion. This replica will be correctly marked corrupt. But if the node had participated in the pipeline recovery, a new (delayed) report with the correct gen stamp will come soon. However, this report won't have any effect on the corrupt state of the replica.
 - If block reports are received while the block is still under construction (i.e. client's call to make block committed has not been received by NN), they are blindly accepted regardless of the gen stamp. If a failed node reports in with the old gen stamp while pipeline recovery is on-going, it will be accepted and counted as valid during commit of the block.
-
->Due to the above two problems, correct replicas can be marked corrupt and corrupt replicas can be accepted during commit. So far we have observed two cases in production.
-
+> Due to the above two problems, correct replicas can be marked corrupt and corrupt replicas can be accepted during commit. So far we have observed two cases in production.
 - The client hangs forever to close a file. All replicas are marked corrupt.
 - After the successful close of a file, read fails. Corrupt replicas are accepted during commit and valid replicas are marked corrupt afterward.
 
@@ -47,5 +44,5 @@ java.io.IOException: Bad response ERROR for block BP-178649112-10.35.66.11-13534
 
 ##解决问题的办法
 - 快速解决问题可以将此文件删除，但造成的后果就是jobtracker上的历史jar包，或HBase Region上的compaction产生的文件将会丢失。
-- 长效解决此问题的办法是升级到CDH 5 Beta 2之后的版本
+- 长效解决此问题的办法是升级到CDH 5 Beta 2之后的版本,或者手动将path HDFS-5438打上。
 
