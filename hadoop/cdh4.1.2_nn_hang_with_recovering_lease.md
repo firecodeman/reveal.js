@@ -11,6 +11,7 @@ NN中LeaseManager的Monitor定时检查文件是否硬过期（同时加写锁�
 ![DFSClient数据写入逻辑](readsource/DFSClient.png "DFSClient数据写入逻辑")
 ![LeaseManager逻辑](readsource/LeaseManager.png "LeaseManager逻辑")
 
+以下是NN中LeaseManager Monitor线程,其中会定期调用checkLease(),调用之前加写锁。
 ```
 //LeaseManager Monitor
   class Monitor implements Runnable {
@@ -42,6 +43,7 @@ NN中LeaseManager的Monitor定时检查文件是否硬过期（同时加写锁�
   }
 ```
 
+以下是LeaseManager中checkLeases方法,其中会将打开时间较长的文件优先做是否达到硬过期时间(默认一小时)的限制,如果达到此时间则需要调用fsnamesystem.internalReleaseLease(oldest, p, HdfsServerConstants.NAMENODE_LEASE_HOLDER)强行将文件关闭，并保证数据一致。
 ```
 //LeaseManager 
   private synchronized void checkLeases() {
@@ -84,6 +86,7 @@ NN中LeaseManager的Monitor定时检查文件是否硬过期（同时加写锁�
   } 
 ```
 
+而fsnamesystem.internalReleaseLease()内部会调用fsnamesystem.logReassignLease()将变化写入到editorlog同时加写锁,在Lease Manager Monitor中加写锁的凬时，此处再次加写锁，就会造成问题。造成fsnamesystem.internalReleaseLease()始终返回false，最终造成始终无法正常退出。
 ```
 //FSNameSystem
   private void logReassignLease(String leaseHolder, String src,
@@ -98,5 +101,8 @@ NN中LeaseManager的Monitor定时检查文件是否硬过期（同时加写锁�
   }
 ```
 
+在HDFS-4186中的改造可参考 https://issues.apache.org/jira/browse/HDFS-4186 
 ##解决办法
+ - 暂时的避免方案是建议在使用DFSClient时及时关闭操作的文件，不要长时间打开着文件，但不写入任何信息，最终造成NameNode Lease硬过期。
+ - 长期来看的话需要将当前版本升级到CDH4 4.2.1之后的版本,或打patch HDFS-4186 
 
