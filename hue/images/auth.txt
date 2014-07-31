@@ -1,0 +1,72 @@
+@startuml
+class DesktopBackendBase {
+  +authenticate(username, password)
+  +get_user(user_id)
+  +check_auth(username, password)
+}
+
+django.contrib.auth.backends.ModelBackend <|-- AllowFirstUserDjangoBackend
+
+class AllowFirstUserDjangoBackend {
+  +authenticate(username, password)
+  +get_user(user_id)
+  +is_first_login_ever()
+
+}
+
+DesktopBackendBase <|-- OAuthBackend 
+
+class OAuthBackend {
+  +authenticate(username, password)
+  +manages_passwords_externally(cls) #return true
+}
+
+DesktopBackendBase <|-- AllowAllBackend
+
+class AllowAllBackend {
+  +authenticate(username, password)
+  +manages_passwords_externally(cls) #return true
+}
+
+DesktopBackendBase <|-- DemoBackend
+
+class DemoBackend {
+  +authenticate(username, password)
+  +get_user(user_id)
+  -_random_name()
+}
+
+DesktopBackendBase <|-- PamBackend
+
+class PamBackend {
+  +check_auth(username, password)
+  +manages_passwords_externally(cls) #return true
+}
+
+django_auth_ldap.LDAPBackend <|-- LdapBackend
+
+class LdapBackend {
+  +LdapBackend()
+  +get_or_create_user(username, ldap_user)
+  +authenticate(username, password)
+  +get_user(user_id)
+  +import_groups(user)
+  +manages_passwords_externally(cls) #return true
+}
+
+django.contrib.auth.backends.ModelBackend <|-- SpnegoDjangoBackend
+
+class SpnegoDjangoBackend {
+  +authenticate(username, password)
+  +clean_username(username)
+  +get_user(user_id)
+}
+
+django.contrib.auth.backends.RemoteUserBackend <|-- RemoteUserDjangoBackend
+
+class RemoteUserDjangoBackend {
+  +authenticate(username, password)
+  +get_user(user_id)
+}
+
+@enduml
