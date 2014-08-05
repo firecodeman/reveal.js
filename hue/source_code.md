@@ -29,22 +29,36 @@
            |- log.conf Python logger配置
            |- log4j.properties  Java logger配置
         |- core 核心代码
-           |- ext-py　Python扩展包
+           |- ext-py　Python依赖的包
            |- src 
-              |- app_template 应用模板
-                 |- app_name 
-                 |- Makefile  
-                 |- setup.py 
-              |- app_template_proxy
+              |- app_template [应用模板]
+              |- app_template_proxy [代理类型的应用模板] 其中index.mako负责根据子系统地址渲染内容
               |- auth  登录验证功能模块
-              |- lib
+              |- lib  项目内抽离出的包
               |- locale 国际化配置
-              |- log
+              |- log  日志输出组件,包含日志buffer
               |- management  管理工具
                  |- commands 系统命令用户创建一个新窗口应用或代理应用等
               |- migrations django db 合并工具
               |- templates 框架公共页面mako模板,包含404,500,login,common_header,comm_footer等模板
+              |- api.py 从urls.py中映射的desktop/api/下的url请求实现
+              |- app_manager.py 负责维护DESKTOP_LIBS、DESKTOP_APPS、DESKTOP_MODULES全局变量
+              |- conf.py  HUE系统在hue.ini中的配置工具，包括key和说明
+              |- context_processors.py 子系统上下文替换工具
+              |- decorators.py 用户是否拥有某app的某action的修饰类
+              |- kt_renewer.py keytab renewer
+              |- manage_entry.py
+              |- middleware.py
+              |- models.py
+              |- setting.py
+              |- supervisor.py  整个HUE系统入口
+              |- urls.py  整个系统url与view映射关系
+              |- views.py 
            |- static  公共页面静态内容
+           |- bable.cfg
+           |- hueversion.py
+           |- regenerate_thrift.sh
+           |- setup.py
         |- 
      |- dist
      |- docs
